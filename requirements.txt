@@ -1,0 +1,9 @@
+﻿fastapi
+uvicorn
+sqlalchemy>=2.0,<2.1
+alembic
+pydantic
+email-validator
+pytest
+pytest-cov
+httpx
