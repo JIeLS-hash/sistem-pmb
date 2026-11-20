@@ -178,3 +178,30 @@ GitHub: https://github.com/JIeLS-hash/sistem-pmb
 
 **Sistem Penerimaan Mahasiswa Baru (PMB)**  
 Dikembangkan menggunakan Python dan FastAPI.
+
+---
+
+## Modul 2: Sistem Pengisian Kartu Rencana Studi (KRS)
+
+Modul lanjutan dari sistem PMB yang memungkinkan mahasiswa ber-NIM menyusun rencana studi per semester dengan validasi aturan akademik dan alur persetujuan Dosen PA[cite: 3, 5].
+
+### Fitur & Arsitektur Utama
+- **Skema Database Terindeks:** Tabel `matakuliah`, `krs`, `krs_detail`, `prerequisite`, `skala_nilai`, dan `riwayat_nilai` dikelola melalui migrasi Alembic[cite: 1, 4, 5].
+- **Rantai Validasi (*Chain of Responsibility*):** Eksekusi *fail-fast* pada `app/services/krs_validator.py` untuk mengecek:
+  1. Tidak ada pengambilan mata kuliah ganda (*double enrollment*)[cite: 5, 6].
+  2. Seluruh prasyarat mata kuliah lulus dengan nilai minimal **C**[cite: 5, 6].
+  3. Tidak ada bentrok jadwal pada hari dan irisan jam kuliah yang sama[cite: 4, 5, 6].
+  4. Total beban studi maksimal **24 SKS** per semester[cite: 5, 6].
+  *(Keputusan desain selengkapnya tercatat di `docs/ADR_001_VALIDATION_CHAIN.md`[cite: 4]).*
+- **Manajemen Transaksi & *State Machine*:** `KRSManager` (`app/services/krs_manager.py`) menggunakan *row locking* (`FOR UPDATE`) serta menegakkan transisi status ketat: `DRAFT` → `SUBMITTED` → `APPROVED` / `REVISION`[cite: 3, 5, 6].
+
+### Menjalankan Seed Data & Bukti Optimasi Query
+```bash
+# 1. Jalankan migrasi database terbaru
+alembic upgrade head
+
+# 2. Isi data dummy mata kuliah, prasyarat, skala nilai, dan riwayat nilai
+python -m app.seed_krs
+
+# 3. Cek hasil query prasyarat (NOT EXISTS) & rencana eksekusi index (EXPLAIN)
+python -m docs.explain_prerequisite

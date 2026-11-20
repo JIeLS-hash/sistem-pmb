@@ -20,6 +20,8 @@ from app.database import Base
 if TYPE_CHECKING:
     from app.models.program_studi import ProgramStudi
     from app.models.jalur_masuk import JalurMasuk
+    from app.models.krs import KRS
+    from app.models.riwayat_nilai import RiwayatNilai
 
 
 class CalonMahasiswa(Base):
@@ -110,4 +112,14 @@ class CalonMahasiswa(Base):
     jalur_masuk: Mapped["JalurMasuk"] = relationship(
         "JalurMasuk",
         back_populates="calon_mahasiswa"
+    )
+
+    krs_list: Mapped[list["KRS"]] = relationship(
+        "KRS",
+        back_populates="mahasiswa"
+    )
+
+    riwayat_nilai: Mapped[list["RiwayatNilai"]] = relationship(
+        "RiwayatNilai",
+        back_populates="mahasiswa"
     )
