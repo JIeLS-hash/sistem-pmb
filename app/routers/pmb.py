@@ -214,6 +214,37 @@ def approve_mahasiswa(
             detail=str(exc)
         ) from exc
 
+@router.put(
+    "/reject/{id}",
+    response_model=CalonMahasiswaResponse
+)
+def reject_mahasiswa(
+    id: int,
+    db: Session = Depends(get_db)
+):
+    mahasiswa = db.get(CalonMahasiswa, id)
+
+    if mahasiswa is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Data pendaftaran tidak ditemukan"
+        )
+
+    if mahasiswa.status == "rejected":
+        return mahasiswa
+
+    if mahasiswa.status == "approved":
+        raise HTTPException(
+            status_code=400,
+            detail="Pendaftaran yang sudah disetujui tidak dapat ditolak"
+        )
+
+    mahasiswa.status = "rejected"
+    db.commit()
+    db.refresh(mahasiswa)
+
+    return mahasiswa
+
 
 @router.get(
     "/stats",
@@ -222,32 +253,19 @@ def approve_mahasiswa(
 def get_pmb_stats(
     db: Session = Depends(get_db)
 ):
-    # Menghitung seluruh pendaftar
-    total = db.query(
-        func.count(CalonMahasiswa.id)
-    ).scalar() or 0
+    rows = (
+        db.query(CalonMahasiswa.status, func.count(CalonMahasiswa.id))
+        .group_by(CalonMahasiswa.status)
+        .all()
+    )
 
-    # Menghitung pendaftar berdasarkan status
-    pending = db.query(
-        func.count(CalonMahasiswa.id)
-    ).filter(
-        CalonMahasiswa.status == "pending"
-    ).scalar() or 0
-
-    approved = db.query(
-        func.count(CalonMahasiswa.id)
-    ).filter(
-        CalonMahasiswa.status == "approved"
-    ).scalar() or 0
-
-    rejected = db.query(
-        func.count(CalonMahasiswa.id)
-    ).filter(
-        CalonMahasiswa.status == "rejected"
-    ).scalar() or 0
+    counts = {status_name: count for status_name, count in rows}
+    pending = counts.get("pending", 0)
+    approved = counts.get("approved", 0)
+    rejected = counts.get("rejected", 0)
 
     return {
-        "total_pendaftar": total,
+        "total_pendaftar": pending + approved + rejected,
         "pending": pending,
         "approved": approved,
         "rejected": rejected
