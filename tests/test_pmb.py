@@ -511,3 +511,36 @@ def test_seed_master_data_idempotent(
 
     finally:
         db.close()
+
+
+# TEST 20: Penolakan pendaftar berhasil & idempotent
+def test_reject_student_success_and_idempotent(client, master_data):
+    register = client.post(
+        "/api/pmb/register",
+        json=buat_data_mahasiswa(master_data, email="tolak@example.com")
+    )
+    mahasiswa_id = register.json()["id"]
+
+    res1 = client.put(f"/api/pmb/reject/{mahasiswa_id}")
+    assert res1.status_code == 200
+    assert res1.json()["status"] == "rejected"
+
+    res2 = client.put(f"/api/pmb/reject/{mahasiswa_id}")
+    assert res2.status_code == 200
+    assert res2.json()["status"] == "rejected"
+
+
+# TEST 21: Reject ID tidak ditemukan (404) & pendaftar sudah approved (400)
+def test_reject_invalid_cases(client, master_data):
+    res_not_found = client.put("/api/pmb/reject/9999")
+    assert res_not_found.status_code == 404
+
+    register = client.post(
+        "/api/pmb/register",
+        json=buat_data_mahasiswa(master_data, email="sudahapprove@example.com")
+    )
+    mahasiswa_id = register.json()["id"]
+    client.put(f"/api/pmb/approve/{mahasiswa_id}")
+
+    res_approved = client.put(f"/api/pmb/reject/{mahasiswa_id}")
+    assert res_approved.status_code == 400

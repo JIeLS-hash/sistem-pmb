@@ -23,13 +23,17 @@ Proyek ini dibuat sebagai bagian dari tugas perkuliahan.
 2. Pembuatan NIM secara otomatis.
 3. Pengecekan status pendaftaran.
 4. Persetujuan pendaftaran calon mahasiswa.
-5. Melihat statistik pendaftaran.
-6. Validasi data dan penanganan pendaftaran dengan email duplikat.
+5. Penolakan pendaftaran calon mahasiswa.
+6. Melihat statistik pendaftaran.
+7. Validasi data dan penanganan pendaftaran dengan email duplikat.
 
 ## Struktur Folder
 
 ```text
 PMB - Project/
+│
+├── .github/
+│   └── pull_request_template.md
 │
 ├── alembic/
 │   └── versions/
@@ -117,6 +121,7 @@ Aplikasi dapat diakses melalui:
 - **API:** http://127.0.0.1:8000
 - **Swagger UI:** http://127.0.0.1:8000/docs
 
+
 ## Daftar Endpoint API
 
 | Method | Endpoint | Fungsi |
@@ -124,7 +129,17 @@ Aplikasi dapat diakses melalui:
 | POST | `/api/pmb/register` | Mendaftarkan calon mahasiswa |
 | GET | `/api/pmb/status/{id}` | Mengecek status pendaftaran |
 | PUT | `/api/pmb/approve/{id}` | Menyetujui pendaftaran |
+| PUT | `/api/pmb/reject/{id}` | Menolak pendaftaran |
 | GET | `/api/pmb/stats` | Melihat statistik pendaftar |
+
+## Format NIM Otomatis
+
+NIM dibuat secara otomatis ketika admin menyetujui pendaftaran (`PUT /api/pmb/approve/{id}`) dengan format:
+
+`[Tahun: 4 digit][Kode Prodi: 3 karakter]-[Nomor Urut: 4 digit]`
+
+- **Contoh:** `2026001-0001` (`2026` = tahun pendaftaran, `001` = Teknik Informatika, `0001` = pendaftar pertama yang disetujui).
+- **Idempotent & Thread-Safe:** Pemanggilan berulang pada pendaftar yang sama tidak menghasilkan NIM baru, dan transaksi dikunci (`BEGIN IMMEDIATE` + constraint `UNIQUE`) untuk mencegah duplikasi akibat *race condition*.
 
 ## Pengujian Aplikasi
 
@@ -144,10 +159,10 @@ python -m pytest --cov=app --cov-report=term-missing
 
 ### Hasil Pengujian
 
-- Total pengujian: **19**
-- Pengujian berhasil: **19**
+- Total pengujian: **21**
+- Pengujian berhasil: **21**
 - Pengujian gagal: **0**
-- Test coverage: **93%**
+- Test coverage: **94%**
 
 ## Dokumentasi Penggunaan AI
 
