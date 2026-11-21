@@ -50,3 +50,19 @@ class ConflictReportResponse(BaseModel):
     total_schedules: int
     total_conflicts: int
     conflicts: list[dict[str, Any]]
+
+
+class RescheduleSuggestRequest(BaseModel):
+    raw_candidates: list[dict[str, Any]] | None = None
+    limit: int = Field(default=5, ge=1, le=20)
+
+
+class RescheduleSuggestResponse(BaseModel):
+    jadwal_id: int
+    kelas_kode: str
+    prompt_step_3: str
+    raw_count: int
+    valid_count: int
+    rejected_count: int
+    suggestions: list[dict[str, Any]]
+    rejected_samples: list[dict[str, Any]]

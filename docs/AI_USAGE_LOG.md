@@ -83,3 +83,22 @@ Penggunaan AI membantu proses pembelajaran dan pengembangan Sistem Penerimaan Ma
 - **Plan:** Memisahkan entitas `Ruangan`, `Dosen`, `Kelas`, dan `Jadwal`, menyusun detektor bentrok 3 dimensi (`hari × waktu × ruangan × dosen`) berbasis *sweep-line*, serta membungkus aturan *hard constraint* ke dalam `SchedulingService` sebelum disimpan ke database.
 - **Act:** Mengimplementasikan migrasi *batch* Alembic, skrip *seed* 42 jadwal, modul `conflict_detector.py` beserta ADR-nya, endpoint REST API `/api/jadwal`, serta pengujian berbasis properti dan *differential testing* dengan Hypothesis.
 - **Reflect:** Pengujian diferensial (*differential testing*) antara fungsi teroptimasi (`sweep-line`) dan fungsi referensi sederhana (`detect_naive`) sangat membantu memastikan tidak ada *edge case* irisan waktu (seperti jadwal berurutan tepat di menit yang sama) yang terlewat akibat logika pengurutan.
+
+---
+
+## Observer Pattern, Outbox, & AI Rescheduling (Minggu 8)
+
+### 1. Riwayat Prompt & Revisi Kode
+| Tahap | Ringkasan Prompt ke AI | Hasil & Revisi yang Dilakukan |
+| :--- | :--- | :--- |
+| **Observer & Kanal Log** | Mengimplementasikan *Observer Pattern* (`ScheduleEvent`, `ScheduleSubject`, `StudentObserver`, `LecturerObserver`, `AdminObserver`) dengan kanal log `EMAIL`, `SMS`, dan `PUSH`. | Menambahkan blok `try/except` per *observer* pada salinan daftar `list(self._observers)` di `app/services/observer.py` agar kegagalan satu *observer* tidak menghentikan pengiriman ke *observer* lain. |
+| **Outbox & Invalidasi KRS** | Membuat tabel `outbox_events`, `OutboxDispatcher` (pengiriman setelah `commit` + *idempotency key*), serta `KRSInvalidator` untuk transisi `Actor.SISTEM -> REVISION`. | Mengintegrasikan `KRSInvalidator` dan `OutboxDispatcher.enqueue_event()` sebelum `db.commit()` di `SchedulingService`, lalu memanggil `OutboxDispatcher.dispatch_pending()` setelah `commit` berhasil. |
+| **AI Rescheduling & .ics** | Menyusun **Prompt Step 3** dan saringan validator `saring_saran` untuk memfilter kandidat jadwal alternatif dari AI, serta ekspor kalender `.ics`. | Membangun `app/services/ai_rescheduler.py` dan `app/services/ics_exporter.py` (RFC 5545) yang menolak kandidat dengan jam tidak valid, ruangan tidak ada, kapasitas kurang, atau masih bentrok 3D. |
+| **Conflict Resolver UI** | Membuat halaman antarmuka admin interaktif untuk melihat bentrok, meminta saran AI, menerapkan jadwal, dan memantau log notifikasi. | Menambahkan `app/templates/conflict_resolver.html` dan endpoint `GET /api/jadwal/dashboard` di `app/routers/jadwal.py`. |
+| **Pengujian Minggu 8** | Menyusun *test* untuk *observer* 3 kanal, *outbox* pasca-*commit*, 42 transisi status KRS ilegal, saringan saran AI, ekspor `.ics`, dan *dashboard*. | Menambahkan `tests/test_observer_reschedule.py` yang menguji seluruh 48 kombinasi matriks transisi status KRS (6 valid dan 42 ilegal). |
+
+### 2. Refleksi OPAR (Observe, Plan, Act, Reflect)
+- **Observe:** Mengirim notifikasi langsung di dalam `SchedulingService` sebelum `db.commit()` menimbulkan *tight coupling* (melanggar *Open-Closed Principle*) serta risiko mengirim notifikasi palsu apabila transaksi database gagal dan mengalami *rollback*.
+- **Plan:** Memisahkan pengiriman notifikasi menggunakan *Observer Pattern*, menyimpan *event* ke tabel `outbox_events` dan mengembalikan KRS terdampak ke `REVISION` dalam satu transaksi database yang sama, serta menyaring saran AI melalui validator deterministik (`saring_saran`).
+- **Act:** Mengimplementasikan `observer.py`, `outbox_dispatcher.py`, `krs_invalidator.py`, `ai_rescheduler.py`, `ics_exporter.py`, halaman *dashboard* `conflict_resolver.html`, UML *Sequence Diagram*, dan pengujian menyeluruh.
+- **Reflect:** Pola *Transactional Outbox* dipadukan dengan *idempotency key* (`event_id`) memastikan notifikasi hanya terkirim jika perubahan jadwal dan status KRS benar-benar sah tersimpan di database, sementara `saring_saran` mencegah halusinasi slot jadwal dari AI masuk ke produksi.

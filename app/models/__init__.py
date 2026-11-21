@@ -8,7 +8,7 @@ from app.models.prerequisite import Prerequisite
 from app.models.krs import KRS, KRSDetail
 from app.models.riwayat_nilai import RiwayatNilai
 from app.models.jadwal import Ruangan, Dosen, Kelas, Jadwal
-
+from app.models.outbox import OutboxEvent
 __all__ = [
     "ProgramStudi",
     "JalurMasuk",

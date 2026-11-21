@@ -228,3 +228,24 @@ python -m app.seed_jadwal
 # 3. Verifikasi deteksi bentrok (sweep-line vs naive)
 python -m app.services.conflict_detector
 ```
+
+---
+
+## Modul 4: Observer Pattern, Outbox, & AI Rescheduling (Minggu 8)
+
+Lanjutan modul penjadwalan yang membuat perubahan jadwal bersifat reaktif, aman secara transaksional, dan dilengkapi asisten penjadwalan ulang berbantuan AI.
+
+### Fitur & Arsitektur Utama
+- **Observer Pattern & Isolasi Error (`app/services/observer.py`):** `ScheduleSubject` menyiarkan `ScheduleEvent` ke `StudentObserver` (`PUSH` & `EMAIL`), `LecturerObserver` (`SMS` & `EMAIL`), dan `AdminObserver` (`EMAIL` audit).
+- **Transactional Outbox (`app/services/outbox_dispatcher.py`):** Event disimpan ke tabel `outbox_events` dalam transaksi DB yang sama dan dikirimkan **setelah `db.commit()`** menggunakan *idempotency key* (`event_id`).
+- **Invalidasi KRS Otomatis (`app/services/krs_invalidator.py`):** Saat jadwal kelas berubah atau dihapus, KRS berstatus `SUBMITTED`/`APPROVED` yang terdampak otomatis dikembalikan ke `REVISION` oleh `Actor.SISTEM`.
+- **AI Rescheduling & Ekspor Kalender (`app/services/ai_rescheduler.py`, `app/services/ics_exporter.py`):** Menyusun *Prompt Step 3*, menyaring kandidat saran AI melalui validator deterministik `saring_saran`, dan mendukung unduhan kalender `.ics` (RFC 5545).
+- **Conflict Resolver UI:** Dashboard interaktif admin dapat diakses melalui `GET /api/jadwal/dashboard`. *(Diagram alur tersedia di `docs/SEQUENCE_DIAGRAM_OBSERVER.md`).*
+
+### Endpoint Tambahan Minggu 8
+| Method | Endpoint | Deskripsi |
+| :--- | :--- | :--- |
+| `GET` | `/api/jadwal/dashboard` | Halaman web **Conflict Resolver UI** untuk admin akademik |
+| `POST` | `/api/jadwal/{jadwal_id}/suggest-reschedule` | Menghasilkan saran slot pengganti bebas bentrok yang telah disaring validator |
+| `GET` | `/api/jadwal/export/ics` | Mengekspor jadwal kuliah ke format standar iCalendar (`.ics`) |
+| `GET` | `/api/jadwal/notifications` | Menampilkan riwayat log notifikasi lintas kanal (`EMAIL`, `SMS`, `PUSH`) |

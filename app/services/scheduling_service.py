@@ -14,6 +14,9 @@ from app.services.conflict_detector import (
     _pair_conflicts,
     detect_schedule_conflict,
 )
+from app.services.krs_invalidator import KRSInvalidator
+from app.services.observer import EventType, ScheduleEvent
+from app.services.outbox_dispatcher import OutboxDispatcher
 
 
 class SchedulingNotFoundError(Exception):
@@ -40,7 +43,19 @@ class SchedulingConflictError(Exception):
 
 
 class SchedulingService:
-    """Layanan CRUD jadwal kuliah dengan capacity check, row locking, dan deteksi bentrok 3D."""
+    """Layanan CRUD jadwal kuliah dengan capacity check, row locking, Outbox, dan invalidasi KRS."""
+
+    @staticmethod
+    def _snapshot_jadwal(jadwal: Jadwal) -> dict[str, Any]:
+        return {
+            "id": jadwal.id,
+            "kelas_id": jadwal.kelas_id,
+            "hari": jadwal.hari,
+            "jam_mulai": jadwal.jam_mulai.strftime("%H:%M:%S"),
+            "jam_selesai": jadwal.jam_selesai.strftime("%H:%M:%S"),
+            "ruangan_kode": jadwal.ruangan_kode,
+            "dosen_id": jadwal.dosen_id,
+        }
 
     @staticmethod
     def _validate_time_and_day(hari: int, jam_mulai: time, jam_selesai: time) -> None:
@@ -200,8 +215,21 @@ class SchedulingService:
             dosen_id=dosen.id,
         )
         db.add(jadwal)
+        db.flush()
+
+        event = ScheduleEvent(
+            event_type=EventType.SCHEDULE_CREATED,
+            jadwal_id=jadwal.id,
+            before=None,
+            after=cls._snapshot_jadwal(jadwal),
+        )
+        OutboxDispatcher.enqueue_event(db, event)
+
         db.commit()
         db.refresh(jadwal)
+
+        # Kirim notifikasi hanya setelah transaksi utama berhasil di-commit
+        OutboxDispatcher.dispatch_pending(db)
         return jadwal
 
     @classmethod
@@ -213,6 +241,8 @@ class SchedulingService:
         )
         if jadwal is None:
             raise SchedulingNotFoundError(f"Jadwal dengan id={jadwal_id} tidak ditemukan")
+
+        before_snapshot = cls._snapshot_jadwal(jadwal)
 
         new_kelas_id = payload.kelas_id if payload.kelas_id is not None else jadwal.kelas_id
         new_hari = payload.hari if payload.hari is not None else jadwal.hari
@@ -251,8 +281,28 @@ class SchedulingService:
         jadwal.ruangan_kode = ruangan.kode
         jadwal.dosen_id = dosen.id
 
+        invalidated_krs_ids = KRSInvalidator.invalidate_affected_krs(
+            db,
+            kelas_id=kelas.id,
+            reason=f"Jadwal #{jadwal.id} mengalami perubahan waktu/ruangan/dosen.",
+        )
+
+        after_snapshot = cls._snapshot_jadwal(jadwal)
+        event = ScheduleEvent(
+            event_type=EventType.SCHEDULE_CHANGED,
+            jadwal_id=jadwal.id,
+            before=before_snapshot,
+            after=after_snapshot,
+        )
+        OutboxDispatcher.enqueue_event(
+            db, event, invalidated_krs_ids=invalidated_krs_ids
+        )
+
         db.commit()
         db.refresh(jadwal)
+
+        # Kirim notifikasi setelah commit
+        OutboxDispatcher.dispatch_pending(db)
         return jadwal
 
     @classmethod
@@ -263,5 +313,29 @@ class SchedulingService:
         if jadwal is None:
             raise SchedulingNotFoundError(f"Jadwal dengan id={jadwal_id} tidak ditemukan")
 
+        before_snapshot = cls._snapshot_jadwal(jadwal)
+        deleted_id = jadwal.id
+        kelas_id = jadwal.kelas_id
+
         db.delete(jadwal)
+
+        invalidated_krs_ids = KRSInvalidator.invalidate_affected_krs(
+            db,
+            kelas_id=kelas_id,
+            reason=f"Jadwal #{deleted_id} telah dihapus dari jadwal kuliah.",
+        )
+
+        event = ScheduleEvent(
+            event_type=EventType.SCHEDULE_DELETED,
+            jadwal_id=deleted_id,
+            before=before_snapshot,
+            after=None,
+        )
+        OutboxDispatcher.enqueue_event(
+            db, event, invalidated_krs_ids=invalidated_krs_ids
+        )
+
         db.commit()
+
+        # Kirim notifikasi setelah commit
+        OutboxDispatcher.dispatch_pending(db)

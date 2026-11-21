@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from pathlib import Path
+from typing import Any
+
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Response, status
+from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -9,7 +13,12 @@ from app.schemas.jadwal import (
     JadwalCreate,
     JadwalResponse,
     JadwalUpdate,
+    RescheduleSuggestRequest,
+    RescheduleSuggestResponse,
 )
+from app.services.ai_rescheduler import AIRescheduler
+from app.services.ics_exporter import export_schedules_to_ics
+from app.services.observer import notification_manager
 from app.services.scheduling_service import (
     SchedulingConflictError,
     SchedulingNotFoundError,
@@ -19,11 +28,81 @@ from app.services.scheduling_service import (
 
 router = APIRouter(prefix="/api/jadwal", tags=["Jadwal & Ruangan"])
 
+router = APIRouter(prefix="/api/jadwal", tags=["Jadwal & Ruangan"])
+
+DASHBOARD_TEMPLATE_PATH = (
+    Path(__file__).resolve().parent.parent / "templates" / "conflict_resolver.html"
+)
+
+
+@router.get("/dashboard", response_class=HTMLResponse)
+def conflict_resolver_dashboard() -> HTMLResponse:
+    """Menampilkan halaman web Conflict Resolver UI untuk Admin Akademik."""
+    html = DASHBOARD_TEMPLATE_PATH.read_text(encoding="utf-8")
+    return HTMLResponse(content=html)
+
 
 @router.get("/conflicts", response_model=ConflictReportResponse)
+
 def get_schedule_conflicts(db: Session = Depends(get_db)) -> dict:
     """Melaporkan seluruh jadwal bentrok (ruangan & dosen) menggunakan algoritma sweep-line."""
     return SchedulingService.get_all_conflicts(db)
+
+
+@router.get("/export/ics")
+def export_jadwal_ics(
+    hari: int | None = Query(default=None, ge=1, le=6),
+    ruangan_kode: str | None = Query(default=None),
+    dosen_id: int | None = Query(default=None, gt=0),
+    kelas_id: int | None = Query(default=None, gt=0),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Mengekspor jadwal kuliah dalam format iCalendar (.ics) yang dapat diimpor ke Google/Outlook Calendar."""
+    schedules = SchedulingService.list_jadwal(
+        db,
+        hari=hari,
+        ruangan_kode=ruangan_kode,
+        dosen_id=dosen_id,
+        kelas_id=kelas_id,
+    )
+    ics_content = export_schedules_to_ics(db, schedules=schedules)
+    return Response(
+        content=ics_content,
+        media_type="text/calendar; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="jadwal_kuliah.ics"'},
+    )
+
+
+@router.get("/notifications")
+def get_notification_logs() -> dict[str, Any]:
+    """Menampilkan log notifikasi lintas kanal (EMAIL, SMS, PUSH) dari Observer Pattern."""
+    return {
+        "total_logs": len(notification_manager.logs),
+        "errors": notification_manager.subject.errors,
+        "logs": list(reversed(notification_manager.logs)),
+    }
+
+
+@router.post(
+    "/{jadwal_id}/suggest-reschedule",
+    response_model=RescheduleSuggestResponse,
+)
+def suggest_reschedule_with_ai(
+    jadwal_id: int,
+    payload: RescheduleSuggestRequest | None = Body(default=None),
+    db: Session = Depends(get_db),
+):
+    """Menghasilkan alternatif jadwal bebas bentrok menggunakan Prompt Step 3 + saringan validator."""
+    req = payload or RescheduleSuggestRequest()
+    try:
+        return AIRescheduler.suggest_reschedule_options(
+            db,
+            jadwal_id=jadwal_id,
+            raw_candidates=req.raw_candidates,
+            limit=req.limit,
+        )
+    except SchedulingNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
 
 @router.get("", response_model=list[JadwalResponse])

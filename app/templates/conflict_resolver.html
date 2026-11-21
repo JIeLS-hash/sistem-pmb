@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Conflict Resolver UI — Admin Akademik</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --card-alt: #0b1220;
+      --border: #334155;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .container {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 24px 20px 48px;
+    }
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 18px;
+      margin-bottom: 24px;
+    }
+    h1 { margin: 0; font-size: 1.5rem; }
+    .subtitle { margin: 4px 0 0; color: var(--muted); font-size: 0.92rem; }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    button, .btn {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 9px 14px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    button:hover, .btn:hover { background: var(--primary-hover); }
+    .btn-secondary { background: #334155; }
+    .btn-secondary:hover { background: #475569; }
+    .btn-success { background: var(--success); color: #052e16; }
+    .btn-success:hover { background: #059669; color: #fff; }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .stat-label { color: var(--muted); font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    .stat-value { font-size: 1.75rem; font-weight: 700; margin-top: 4px; }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 20px;
+    }
+    @media (max-width: 920px) {
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+      margin-bottom: 20px;
+    }
+    .panel h2 {
+      margin: 0 0 14px;
+      font-size: 1.1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .conflict-item {
+      background: var(--card-alt);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--danger);
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+    .badge-room { background: rgba(239, 68, 68, 0.2); color: #fca5a5; }
+    .badge-lect { background: rgba(245, 158, 11, 0.2); color: #fcd34d; }
+    .badge-email { background: rgba(59, 130, 246, 0.2); color: #93c5fd; }
+    .badge-sms { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; }
+    .badge-push { background: rgba(168, 85, 247, 0.2); color: #d8b4fe; }
+    .sched-pair {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 10px 0;
+    }
+    .sched-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 0.85rem;
+    }
+    .suggestion-card {
+      background: var(--card-alt);
+      border: 1px solid #1d4ed8;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .log-item {
+      background: var(--card-alt);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      font-size: 0.84rem;
+    }
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #10b981;
+      color: #052e16;
+      font-weight: 700;
+      padding: 12px 18px;
+      border-radius: 8px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+      display: none;
+      z-index: 999;
+    }
+    pre {
+      background: #020617;
+      border: 1px solid var(--border);
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      color: #cbd5e1;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>Conflict Resolver UI — Admin Akademik</h1>
+        <p class="subtitle">Deteksi Bentrok 3D (Sweep-Line), AI Rescheduling Tervalidasi, & Notifikasi Observer</p>
+      </div>
+      <div class="actions">
+        <a class="btn btn-secondary" href="/api/jadwal/export/ics">Unduh Kalender (.ics)</a>
+        <a class="btn btn-secondary" href="/docs" target="_blank">Swagger API</a>
+        <button onclick="refreshAll()">Muat Ulang Data</button>
+      </div>
+    </header>
+
+    <section class="stats">
+      <div class="stat-card">
+        <div class="stat-label">Total Jadwal Aktif</div>
+        <div class="stat-value" id="stat-schedules">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Bentrok Terdeteksi</div>
+        <div class="stat-value" id="stat-conflicts" style="color: var(--danger);">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Notifikasi Terkirim</div>
+        <div class="stat-value" id="stat-logs" style="color: var(--success);">-</div>
+      </div>
+    </section>
+
+    <div class="grid-2">
+      <div>
+        <div class="panel">
+          <h2>Daftar Jadwal Bentrok</h2>
+          <div id="conflicts-container">Memuat data bentrok...</div>
+        </div>
+
+        <div class="panel" id="ai-panel" style="display: none;">
+          <h2>
+            <span id="ai-panel-title">Saran AI Tervalidasi</span>
+            <span class="badge badge-email" id="ai-filter-stats"></span>
+          </h2>
+          <div id="suggestions-container"></div>
+          <details style="margin-top: 10px;">
+            <summary style="cursor: pointer; color: var(--muted); font-size: 0.85rem;">Lihat Prompt Step 3 yang Dikirim ke AI</summary>
+            <pre id="prompt-preview"></pre>
+          </details>
+        </div>
+      </div>
+
+      <div>
+        <div class="panel">
+          <h2>Log Notifikasi Observer (Email / SMS / Push)</h2>
+          <div id="logs-container">Belum ada aktivitas notifikasi pada sesi ini.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const HARI_NAMES = {1: "Senin", 2: "Selasa", 3: "Rabu", 4: "Kamis", 5: "Jumat", 6: "Sabtu"};
+
+    function showToast(msg, isError = false) {
+      const el = document.getElementById("toast");
+      el.textContent = msg;
+      el.style.background = isError ? "#ef4444" : "#10b981";
+      el.style.color = isError ? "#fff" : "#052e16";
+      el.style.display = "block";
+      setTimeout(() => { el.style.display = "none"; }, 3500);
+    }
+
+    async function loadConflicts() {
+      const res = await fetch("/api/jadwal/conflicts");
+      const data = await res.json();
+      document.getElementById("stat-schedules").textContent = data.total_schedules;
+      document.getElementById("stat-conflicts").textContent = data.total_conflicts;
+
+      const container = document.getElementById("conflicts-container");
+      if (data.conflicts.length === 0) {
+        container.innerHTML = '<p style="color: var(--success); font-weight: 600;">Tidak ada bentrok jadwal. Seluruh jadwal aman!</p>';
+        return;
+      }
+
+      container.innerHTML = data.conflicts.map((c, idx) => {
+        const [s1, s2] = c.affected_schedules;
+        const isRoom = c.type === "room_conflict";
+        const badgeClass = isRoom ? "badge-room" : "badge-lect";
+        const label = isRoom ? `Bentrok Ruangan (${c.ruangan})` : `Bentrok Dosen (ID #${c.dosen})`;
+        return `
+          <div class="conflict-item">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span class="badge ${badgeClass}">#${idx + 1} ${label}</span>
+              <span style="color: var(--muted); font-size: 0.84rem;">Hari: ${HARI_NAMES[c.hari] || c.hari}</span>
+            </div>
+            <div class="sched-pair">
+              <div class="sched-box">
+                <strong>Jadwal #${s1.id}</strong> (Kelas #${s1.kelas_id})<br/>
+                Waktu: ${s1.jam_mulai} - ${s1.jam_selesai}<br/>
+                Ruang: ${s1.ruangan} | Dosen: #${s1.dosen}<br/>
+                <button style="margin-top:8px; padding:6px 10px; font-size:0.8rem;" onclick="requestAISuggestions(${s1.id})">
+                  Saran AI Jadwal #${s1.id}
+                </button>
+              </div>
+              <div class="sched-box">
+                <strong>Jadwal #${s2.id}</strong> (Kelas #${s2.kelas_id})<br/>
+                Waktu: ${s2.jam_mulai} - ${s2.jam_selesai}<br/>
+                Ruang: ${s2.ruangan} | Dosen: #${s2.dosen}<br/>
+                <button style="margin-top:8px; padding:6px 10px; font-size:0.8rem;" onclick="requestAISuggestions(${s2.id})">
+                  Saran AI Jadwal #${s2.id}
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    async function requestAISuggestions(jadwalId) {
+      const panel = document.getElementById("ai-panel");
+      const container = document.getElementById("suggestions-container");
+      panel.style.display = "block";
+      document.getElementById("ai-panel-title").textContent = `Saran AI untuk Jadwal #${jadwalId}`;
+      container.innerHTML = "<p>Meminta kandidat AI & menjalankan saringan validator...</p>";
+
+      const res = await fetch(`/api/jadwal/${jadwalId}/suggest-reschedule`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({limit: 5})
+      });
+      const data = await res.json();
+      document.getElementById("ai-filter-stats").textContent =
+        `Lolos: ${data.valid_count} | Ditolak saringan: ${data.rejected_count}`;
+      document.getElementById("prompt-preview").textContent = data.prompt_step_3;
+
+      if (data.suggestions.length === 0) {
+        container.innerHTML = "<p>Tidak ditemukan slot alternatif yang memenuhi seluruh aturan.</p>";
+        return;
+      }
+
+      container.innerHTML = data.suggestions.map(s => `
+        <div class="suggestion-card">
+          <div>
+            <strong>${s.hari_nama}, ${s.jam_mulai.slice(0,5)} - ${s.jam_selesai.slice(0,5)}</strong>
+            <span class="badge badge-sms" style="margin-left:6px;">Ruang ${s.ruangan_kode} (Kap. ${s.kapasitas_ruangan})</span>
+            <div style="color: var(--muted); font-size: 0.82rem; margin-top: 4px;">${s.alasan}</div>
+          </div>
+          <button class="btn-success" onclick="applySuggestion(${jadwalId}, ${s.hari}, '${s.jam_mulai}', '${s.jam_selesai}', '${s.ruangan_kode}')">
+            Terapkan
+          </button>
+        </div>
+      `).join("");
+    }
+
+    async function applySuggestion(jadwalId, hari, jamMulai, jamSelesai, ruanganKode) {
+      const res = await fetch(`/api/jadwal/${jadwalId}`, {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          hari: hari,
+          jam_mulai: jamMulai,
+          jam_selesai: jamSelesai,
+          ruangan_kode: ruanganKode
+        })
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        showToast("Gagal menerapkan jadwal: " + JSON.stringify(err.detail), true);
+        return;
+      }
+      showToast(`Jadwal #${jadwalId} berhasil dipindah! KRS terdampak -> REVISION & notifikasi terkirim.`);
+      document.getElementById("ai-panel").style.display = "none";
+      await refreshAll();
+    }
+
+    async function loadNotifications() {
+      const res = await fetch("/api/jadwal/notifications");
+      const data = await res.json();
+      document.getElementById("stat-logs").textContent = data.total_logs;
+
+      const container = document.getElementById("logs-container");
+      if (data.logs.length === 0) {
+        container.innerHTML = '<p style="color: var(--muted);">Belum ada notifikasi terkirim. Terapkan perubahan jadwal untuk memicu Observer.</p>';
+        return;
+      }
+
+      container.innerHTML = data.logs.slice(0, 20).map(log => {
+        const ch = log.channel.toLowerCase();
+        const badgeClass = ch === "email" ? "badge-email" : (ch === "sms" ? "badge-sms" : "badge-push");
+        return `
+          <div class="log-item">
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+              <span class="badge ${badgeClass}">${log.channel}</span>
+              <span style="color: var(--muted); font-size: 0.75rem;">${log.recipient}</span>
+            </div>
+            <div>${log.message}</div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    async function refreshAll() {
+      await Promise.all([loadConflicts(), loadNotifications()]);
+    }
+
+    refreshAll();
+  </script>
+</body>
+</html>
