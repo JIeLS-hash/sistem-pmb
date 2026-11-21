@@ -7,6 +7,7 @@ from app.models.matakuliah import MataKuliah
 from app.models.prerequisite import Prerequisite
 from app.models.krs import KRS, KRSDetail
 from app.models.riwayat_nilai import RiwayatNilai
+from app.models.jadwal import Ruangan, Dosen, Kelas, Jadwal
 
 __all__ = [
     "ProgramStudi",

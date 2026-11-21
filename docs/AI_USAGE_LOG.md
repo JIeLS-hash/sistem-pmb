@@ -64,3 +64,22 @@ Penggunaan AI membantu proses pembelajaran dan pengembangan Sistem Penerimaan Ma
 - **Plan:** Memisahkan tanggung jawab sistem ke dalam tiga lapisan: skema database terindeks dengan migrasi Alembic, rantai validator berbasis pola *Chain of Responsibility* untuk validasi aturan bisnis, serta `KRSManager` untuk mengelola transaksi dan transisi status *state machine*.
 - **Act:** Membangun 6 tabel baru beserta skrip *seed data* khusus (`app/seed_krs.py`), menguji rencana eksekusi query prasyarat dengan `EXPLAIN QUERY PLAN`, mengintegrasikan endpoint FastAPI, serta memverifikasi seluruh skenario normal dan *edge case* melalui 27 pengujian otomatis di Pytest dan Hypothesis.
 - **Reflect:** Penggunaan pola *Chain of Responsibility* membuat setiap aturan validasi terisolasi dan mudah diuji secara terpisah tanpa menumpuk logika di *router*. Selain itu, *property-based testing* dengan Hypothesis terbukti sangat efektif menguji invarian batas maksimal 24 SKS pada 1.000 kombinasi acak yang sulit dijangkau jika hanya mengandalkan kasus uji manual.
+
+---
+
+## Modul Jadwal & Ruangan (Minggu 7)
+
+### 1. Riwayat Prompt & Revisi Kode
+| Tahap | Ringkasan Prompt ke AI | Hasil & Revisi yang Dilakukan |
+| :--- | :--- | :--- |
+| **Model & Migrasi Alembic** | Merancang model SQLAlchemy 2.0 (`Ruangan`, `Dosen`, `Kelas`, `Jadwal`) dan kolom relasi `krs_detail.kelas_id` dengan tipe `Time` serta *check constraint*. | Menambahkan nama *foreign key* eksplisit (`fk_krs_detail_kelas_id`) dan mengaktifkan `render_as_batch=True` di `alembic/env.py` agar migrasi `ALTER TABLE` pada SQLite berjalan lancar. |
+| **Seed Data Jadwal** | Membuat skrip *seed data* idempotent untuk $\ge 10$ ruangan, $\ge 15$ dosen, dan $\ge 40$ jadwal termasuk beberapa skenario bentrok yang disengaja. | Memperbaiki pengecekan `MataKuliah` menggunakan `select(MataKuliah).where(MataKuliah.kode_mk == kode_mk)` menggantikan `db.get()` karena `kode_mk` merupakan kolom `UNIQUE` non-PK, menghasilkan 12 ruangan, 16 dosen, 21 kelas, dan 42 jadwal. |
+| **Conflict Detector & ADR** | Mengimplementasikan `detect_naive` ($O(N^2)$) dan `detect_schedule_conflict` ($O(N \log N + K)$) berbasis *sweep-line* dengan interval setengah terbuka `[jam_mulai, jam_selesai)`. | Mendokumentasikan perbandingan kompleksitas dan pertimbangan struktur data (*Sweep-Line* vs *Interval Tree* vs *Naive*) di `docs/ADR_002_CONFLICT_DETECTION.md` serta memverifikasi deteksi 4 bentrok awal. |
+| **SchedulingService & API** | Membuat layanan CRUD jadwal dengan *row locking* (`with_for_update`), *capacity check*, dan 5 endpoint FastAPI termasuk `GET /api/jadwal/conflicts`. | Menangani kode status HTTP `201`, `204`, `404`, `409` (beserta rincian objek bentrok), dan `422` pada `app/routers/jadwal.py`. |
+| **Testing & Hypothesis** | Menyusun *unit/integration test*, 2 *property-based test* (`hypothesis`), dan *differential test* antara `detect_schedule_conflict` dan `detect_naive`. | Menggunakan database SQLite in-memory terisolasi (`StaticPool`) dengan `dependency_overrides` di `tests/test_jadwal.py` sehingga seluruh pengujian PMB, KRS, dan Jadwal lulus tanpa saling mengganggu. |
+
+### 2. Refleksi OPAR (Observe, Plan, Act, Reflect)
+- **Observe:** Pada modul KRS sebelumnya, jadwal masih menempel langsung pada tabel `matakuliah` sehingga belum mampu memodelkan kelas paralel, kapasitas ruangan, maupun bentrok dosen yang mengajar di dua ruangan bersamaan.
+- **Plan:** Memisahkan entitas `Ruangan`, `Dosen`, `Kelas`, dan `Jadwal`, menyusun detektor bentrok 3 dimensi (`hari × waktu × ruangan × dosen`) berbasis *sweep-line*, serta membungkus aturan *hard constraint* ke dalam `SchedulingService` sebelum disimpan ke database.
+- **Act:** Mengimplementasikan migrasi *batch* Alembic, skrip *seed* 42 jadwal, modul `conflict_detector.py` beserta ADR-nya, endpoint REST API `/api/jadwal`, serta pengujian berbasis properti dan *differential testing* dengan Hypothesis.
+- **Reflect:** Pengujian diferensial (*differential testing*) antara fungsi teroptimasi (`sweep-line`) dan fungsi referensi sederhana (`detect_naive`) sangat membantu memastikan tidak ada *edge case* irisan waktu (seperti jadwal berurutan tepat di menit yang sama) yang terlewat akibat logika pengurutan.

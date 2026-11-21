@@ -205,3 +205,25 @@ python -m app.seed_krs
 
 # 3. Cek hasil query prasyarat (NOT EXISTS) & rencana eksekusi index (EXPLAIN)
 python -m docs.explain_prerequisite
+
+---
+
+## Modul 3: Sistem Penjadwalan Kuliah & Deteksi Bentrok 3 Dimensi (Minggu 7)
+
+Modul manajemen jadwal kuliah dan ruangan yang mendeteksi bentrok 3 dimensi (`hari × waktu × ruangan × dosen`), memeriksa kapasitas ruangan, dan menyediakan laporan bentrok untuk admin.
+
+### Fitur & Arsitektur Utama
+- **Model Domain & Migrasi Batch:** Entitas `Ruangan`, `Dosen`, `Kelas`, dan `Jadwal` (dengan tipe `Time`, *check constraint*, dan indeks komposit `ix_jadwal_ruang` serta `ix_jadwal_dosen`), plus relasi `krs_detail.kelas_id`.
+- **Deteksi Bentrok 3 Dimensi (*Sweep-Line*):** `detect_schedule_conflict` ($O(N \log N + K)$) pada `app/services/conflict_detector.py` menggunakan interval setengah terbuka `[jam_mulai, jam_selesai)` untuk mendeteksi `room_conflict` dan `lecturer_conflict` tanpa salah menandai kelas yang berurutan tanpa jeda. *(Keputusan desain tercatat di `docs/ADR_002_CONFLICT_DETECTION.md`).*
+- **Layanan Penjadwalan (`SchedulingService`):** Operasi CRUD jadwal pada `app/services/scheduling_service.py` dengan *row locking* (`FOR UPDATE`), pengecekan kapasitas ruangan terhadap kuota kelas maupun jumlah mahasiswa terdaftar, serta respons HTTP `409 Conflict` lengkap dengan rincian jadwal yang berbenturan.
+
+### Menjalankan Seed Data & Cek Detektor Bentrok
+```bash
+# 1. Jalankan migrasi database terbaru
+alembic upgrade head
+
+# 2. Isi data dummy (12 ruangan, 16 dosen, 21 kelas, 42 jadwal)
+python -m app.seed_jadwal
+
+# 3. Verifikasi deteksi bentrok (sweep-line vs naive)
+python -m app.services.conflict_detector

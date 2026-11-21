@@ -20,6 +20,7 @@ from app.database import Base
 if TYPE_CHECKING:
     from app.models.calon_mahasiswa import CalonMahasiswa
     from app.models.matakuliah import MataKuliah
+    from app.models.jadwal import Kelas
 
 
 class KRS(Base):
@@ -84,6 +85,11 @@ class KRSDetail(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False
     )
+    kelas_id: Mapped[int | None] = mapped_column(
+        ForeignKey("kelas.id", name="fk_krs_detail_kelas_id"), nullable=True, index=True
+    )
 
     krs: Mapped["KRS"] = relationship("KRS", back_populates="details")
     matakuliah: Mapped["MataKuliah"] = relationship("MataKuliah", back_populates="krs_details")
+    kelas: Mapped["Kelas | None"] = relationship("Kelas")
+    
