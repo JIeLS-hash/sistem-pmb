@@ -205,7 +205,7 @@ python -m app.seed_krs
 
 # 3. Cek hasil query prasyarat (NOT EXISTS) & rencana eksekusi index (EXPLAIN)
 python -m docs.explain_prerequisite
-
+```
 ---
 
 ## Modul 3: Sistem Penjadwalan Kuliah & Deteksi Bentrok 3 Dimensi (Minggu 7)
@@ -227,3 +227,4 @@ python -m app.seed_jadwal
 
 # 3. Verifikasi deteksi bentrok (sweep-line vs naive)
 python -m app.services.conflict_detector
+```
