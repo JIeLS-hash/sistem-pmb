@@ -1,3 +1,15 @@
+## Arsitektur & Perancangan UML Sistem Akademik (Minggu 1–2)
+
+Rancangan arsitektur sistem informasi akademik (`SEVIMA-Mini`) terdokumentasi dalam format Mermaid dan PDF siap cetak:
+- **Class Diagram:** [`diagrams/class-diagram.mmd`](diagrams/class-diagram.mmd) — Hierarki `User` (`CalonMahasiswa`, `Mahasiswa`, `Dosen`, `Admin`) dan entitas inti (`Payment`, `Course`, `KRS`, `Enrollment`, `Schedule`, `Grade`)[cite: 27, 31].
+- **Use Case Diagram:** [`diagrams/usecase-diagram.mmd`](diagrams/usecase-diagram.mmd) — Pemetaan 5 aktor dan 11 *use case* dengan relasi `<<include>>` dan `<<extend>>`[cite: 27, 31].
+- **Sequence Diagram:** [`diagrams/sequence-pmb.mmd`](diagrams/sequence-pmb.mmd), [`diagrams/sequence-krs.mmd`](diagrams/sequence-krs.mmd), dan [`docs/SEQUENCE_DIAGRAM_OBSERVER.md`](docs/SEQUENCE_DIAGRAM_OBSERVER.md)[cite: 27, 31].
+- **Dokumentasi Prompt AI:** [`prompts/uml-prompts.md`](prompts/uml-prompts.md) — 6 *prompt* terbaik beserta perbandingan hasil AI vs revisi manual[cite: 27, 31].
+- **Dokumen PDF Final:** [`docs/ADR-architecture-decisions.pdf`](docs/ADR-architecture-decisions.pdf) & [`docs/Final-UML-diagram.pdf`](docs/Final-UML-diagram.pdf)[cite: 31].
+
+---
+
+
 # Sistem Penerimaan Mahasiswa Baru (PMB)
 
 ## Deskripsi Proyek
