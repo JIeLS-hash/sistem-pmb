@@ -1,0 +1,40 @@
+sequenceDiagram
+    autonumber
+    actor Calon as Calon Mahasiswa
+    participant API as FastAPI PMB Router
+    participant Service as PMBService
+    participant Pay as PaymentGateway
+    participant DB as SQLite Database
+    participant Notif as NotificationService
+
+    Calon->>API: POST /api/pmb/register (data diri & prodi)
+    API->>Service: register_calon(payload)
+    Service->>DB: Cek duplikasi NIK / email
+    alt NIK atau Email sudah terdaftar
+        DB-->>Service: Data ditemukan
+        Service-->>API: Raise DuplicateRegistrationError (409)
+        API-->>Calon: 409 Conflict (Pendaftaran ditolak)
+    else Data unik & valid
+        Service->>DB: INSERT calon_mahasiswa (status='PENDING')
+        DB-->>Service: calon_id & nomor_registrasi
+        Service-->>API: RegistrationResponse
+        API-->>Calon: 201 Created (Nomor Registrasi)
+    end
+
+    Calon->>API: POST /api/pmb/{id}/pay (bukti pembayaran)
+    API->>Pay: verifikasi_pembayaran(nomor_registrasi)
+    alt Pembayaran belum lunas / tidak valid
+        Pay-->>API: Status FAILED
+        API-->>Calon: 402 Payment Required
+    else Pembayaran terverifikasi LUNAS
+        Pay-->>API: Status PAID
+        API->>Service: approve_calon(calon_id)
+        Service->>DB: SELECT ... FOR UPDATE (sequence NIM prodi)
+        Service->>Service: generate_nim(tahun, kode_prodi, urut)
+        Service->>DB: UPDATE status='APPROVED' & INSERT mahasiswa (NIM)
+        Service->>DB: COMMIT TRANSACTION
+        Service->>Notif: kirim_notifikasi_kelulusan(email, NIM)
+        Notif-->>Calon: Email/Push info NIM aktif
+        Service-->>API: ApprovalResponse (NIM)
+        API-->>Calon: 200 OK (Selamat, NIM diterbitkan)
+    end

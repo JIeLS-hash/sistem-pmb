@@ -102,3 +102,13 @@ Penggunaan AI membantu proses pembelajaran dan pengembangan Sistem Penerimaan Ma
 - **Plan:** Memisahkan pengiriman notifikasi menggunakan *Observer Pattern*, menyimpan *event* ke tabel `outbox_events` dan mengembalikan KRS terdampak ke `REVISION` dalam satu transaksi database yang sama, serta menyaring saran AI melalui validator deterministik (`saring_saran`).
 - **Act:** Mengimplementasikan `observer.py`, `outbox_dispatcher.py`, `krs_invalidator.py`, `ai_rescheduler.py`, `ics_exporter.py`, halaman *dashboard* `conflict_resolver.html`, UML *Sequence Diagram*, dan pengujian menyeluruh.
 - **Reflect:** Pola *Transactional Outbox* dipadukan dengan *idempotency key* (`event_id`) memastikan notifikasi hanya terkirim jika perubahan jadwal dan status KRS benar-benar sah tersimpan di database, sementara `saring_saran` mencegah halusinasi slot jadwal dari AI masuk ke produksi.
+
+---
+
+## Perancangan Arsitektur & UML Diagram (Minggu 1–2)
+
+### 1. Ringkasan Artefak UML & Prompt
+- **Class Diagram (`diagrams/class-diagram.mmd`):** Memodelkan hierarki `User` (`CalonMahasiswa`, `Mahasiswa`, `Dosen`, `Admin`) dan entitas inti (`Payment`, `Course`, `KRS`, `Enrollment`, `Schedule`, `Grade`) dengan *visibility modifier* serta relasi *inheritance*, *composition*, dan *aggregation*[cite: 27, 31].
+- **Use Case Diagram (`diagrams/usecase-diagram.mmd`):** Memetakan 5 aktor dan 11 *use case* lengkap dengan relasi `<<include>>` dan `<<extend>>`[cite: 27, 31].
+- **Sequence Diagram (`diagrams/sequence-pmb.mmd` & `diagrams/sequence-krs.mmd`):** Memodelkan skenario end-to-end PMB dan Validasi KRS lengkap dengan *alternate flow* (`alt/else`) untuk penanganan error dan transaksi database[cite: 27, 30, 31].
+- **Katalog Prompt (`prompts/uml-prompts.md`):** Berisi 6 *prompt* utama beserta perbandingan hasil awal AI vs revisi manual[cite: 27, 31].

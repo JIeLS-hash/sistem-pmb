@@ -1,0 +1,49 @@
+sequenceDiagram
+    autonumber
+    actor Mhs as Mahasiswa
+    participant API as FastAPI KRS Router
+    participant Manager as KRSManager
+    participant Chain as KRSValidationChain
+    participant DB as SQLite Database
+    actor DosenPA as Dosen PA
+    participant Notif as NotificationService
+
+    Mhs->>API: POST /api/krs/{krs_id}/submit
+    API->>Manager: submit_krs(krs_id)
+    Manager->>DB: SELECT krs, krs_detail, riwayat_nilai FOR UPDATE
+    Manager->>Chain: validate(krs_context)
+
+    Note over Chain: Rantai Validasi Fail-Fast (Chain of Responsibility)
+    Chain->>Chain: 1. Cek Double Enrollment
+    Chain->>Chain: 2. Cek Prasyarat MK (Nilai >= C)
+    Chain->>Chain: 3. Cek Bentrok Jadwal Kuliah
+    Chain->>Chain: 4. Cek Total Beban Studi (<= 24 SKS)
+
+    alt Salah satu aturan validasi gagal
+        Chain-->>Manager: ValidationFailure(rule_name, detail_error)
+        Manager->>DB: ROLLBACK
+        Manager-->>API: Raise KRSValidationError (422)
+        API-->>Mhs: 422 Unprocessable Entity (Alasan penolakan)
+    else Seluruh validasi lulus
+        Chain-->>Manager: ValidationPassed
+        Manager->>DB: UPDATE krs SET status = 'SUBMITTED'
+        Manager->>DB: COMMIT TRANSACTION
+        Manager->>Notif: notify_dosen_pa(dosen_pa_id, krs_id)
+        Notif-->>DosenPA: Notifikasi KRS menunggu persetujuan
+        Manager-->>API: KRSResponse (status='SUBMITTED')
+        API-->>Mhs: 200 OK (KRS berhasil diajukan)
+    end
+
+    DosenPA->>API: POST /api/krs/{krs_id}/review (approve / revision)
+    API->>Manager: review_krs(krs_id, keputusan, catatan)
+    alt Dosen PA meminta revisi
+        Manager->>DB: UPDATE krs SET status = 'REVISION', catatan = catatan
+        Manager->>DB: COMMIT
+        Manager->>Notif: notify_mahasiswa(nim, 'REVISION')
+        Notif-->>Mhs: Notifikasi KRS perlu direvisi
+    else Dosen PA menyetujui KRS
+        Manager->>DB: UPDATE krs SET status = 'APPROVED'
+        Manager->>DB: COMMIT
+        Manager->>Notif: notify_mahasiswa(nim, 'APPROVED')
+        Notif-->>Mhs: Notifikasi KRS disetujui
+    end
