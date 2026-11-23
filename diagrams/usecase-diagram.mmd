@@ -1,0 +1,40 @@
+flowchart LR
+    Calon(["Calon Mahasiswa"])
+    Mhs(["Mahasiswa"])
+    Dosen(["Dosen / Dosen PA"])
+    Admin(["Admin Akademik"])
+    SysPMB(["Sistem PMB & Notifikasi"])
+
+    subgraph SistemAkademik ["Sistem Informasi Akademik (SEVIMA-Mini)"]
+        UC1([Registrasi Pendaftaran PMB])
+        UC2([Pembayaran Biaya Pendaftaran / UKT])
+        UC3([Verifikasi Berkas & Generate NIM])
+        UC4([Pengisian & Submit KRS])
+        UC5([Validasi Prasyarat, SKS & Bentrok])
+        UC6([Approval / Revisi KRS])
+        UC7([Manajemen Jadwal & Ruangan])
+        UC8([Deteksi Bentrok 3D & Saran AI])
+        UC9([Input & Edit Nilai Mahasiswa])
+        UC10([Validasi Presensi >= 75%])
+        UC11([Generate Transkrip Akademik PDF])
+    end
+
+    Calon --> UC1
+    Calon --> UC2
+    Admin --> UC3
+    UC3 -.->|"<<include>>"| SysPMB
+    UC1 -.->|"<<extend>>"| UC2
+
+    Mhs --> UC4
+    UC4 -.->|"<<include>>"| UC5
+    Dosen --> UC6
+    UC6 -.->|"<<extend>>"| UC4
+
+    Admin --> UC7
+    UC7 -.->|"<<include>>"| UC8
+    UC8 -.->|"<<include>>"| SysPMB
+
+    Dosen --> UC9
+    UC9 -.->|"<<include>>"| UC10
+    Mhs --> UC11
+    UC11 -.->|"<<extend>>"| UC9

@@ -1,0 +1,110 @@
+classDiagram
+    direction TB
+
+    class User {
+        #int id
+        #str nama
+        #str email
+        #str password_hash
+        +login(email: str, password: str) bool
+        +updateProfil(nama: str) void
+    }
+
+    class CalonMahasiswa {
+        -str no_pendaftaran
+        -str jalur_masuk
+        -float nilai_rata_rata
+        -str status_seleksi
+        +submitPendaftaran() void
+        +uploadBerkas(jenis: str, path: str) void
+    }
+
+    class Mahasiswa {
+        -str nim
+        -str kode_prodi
+        -int angkatan
+        -str status_aktif
+        +isiKRS(semester: str) KRS
+        +lihatTranskrip() Transcript
+    }
+
+    class Dosen {
+        -str nidn
+        -str gelar
+        -str departemen
+        +approveKRS(krs_id: int) void
+        +inputNilai(enrollment_id: int, huruf: str) Grade
+    }
+
+    class Admin {
+        -str nip
+        -str hak_akses
+        +verifikasiPMB(calon_id: int) Mahasiswa
+        +kelolaJadwal(schedule: Schedule) void
+    }
+
+    User <|-- CalonMahasiswa
+    User <|-- Mahasiswa
+    User <|-- Dosen
+    User <|-- Admin
+
+    class Payment {
+        -int id
+        -str nomor_tagihan
+        -float nominal
+        -str status_bayar
+        +prosesPembayaran(metode: str) bool
+        +validasiLunas() bool
+    }
+
+    class Course {
+        -str kode_mk
+        -str nama
+        -int sks
+        -int semester_paket
+        +getPrasyarat() list~Course~
+        +hitungBobot() int
+    }
+
+    class KRS {
+        -int id
+        -str semester
+        -str status
+        -int total_sks
+        +tambahMataKuliah(course: Course) void
+        +submit() void
+    }
+
+    class Enrollment {
+        -int id
+        -str tanggal_daftar
+        -float persentase_presensi
+        +cekSyaratPresensi() bool
+    }
+
+    class Schedule {
+        -int id
+        -int hari
+        -time jam_mulai
+        -time jam_selesai
+        -str ruangan_kode
+        +cekBentrok(other: Schedule) bool
+    }
+
+    class Grade {
+        -int id
+        -str nilai_huruf
+        -float nilai_angka
+        -str diubah_oleh
+        +konversiAngka() float
+        +isLulus() bool
+    }
+
+    CalonMahasiswa "1" *-- "1..*" Payment : memiliki
+    Mahasiswa "1" *-- "0..*" KRS : menyusun
+    KRS "1" *-- "1..*" Enrollment : berisi
+    Course "1" o-- "0..*" Course : prasyarat
+    Course "1" o-- "0..*" Enrollment : diambil pada
+    Course "1" *-- "1..*" Schedule : dijadwalkan
+    Dosen "1" o-- "0..*" Schedule : mengampu
+    Enrollment "1" *-- "0..1" Grade : menghasilkan
