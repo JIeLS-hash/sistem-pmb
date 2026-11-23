@@ -1,4 +1,4 @@
-## Arsitektur & Perancangan UML Sistem Akademik (Minggu 1–2)
+## Arsitektur & Perancangan UML Sistem Akademik 
 
 Rancangan arsitektur sistem informasi akademik (`SEVIMA-Mini`) terdokumentasi dalam format Mermaid dan PDF siap cetak:
 - **Class Diagram:** [`diagrams/class-diagram.mmd`](diagrams/class-diagram.mmd) — Hierarki `User` (`CalonMahasiswa`, `Mahasiswa`, `Dosen`, `Admin`) dan entitas inti (`Payment`, `Course`, `KRS`, `Enrollment`, `Schedule`, `Grade`)[cite: 27, 31].
