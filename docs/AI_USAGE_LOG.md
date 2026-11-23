@@ -112,3 +112,13 @@ Penggunaan AI membantu proses pembelajaran dan pengembangan Sistem Penerimaan Ma
 - **Use Case Diagram (`diagrams/usecase-diagram.mmd`):** Memetakan 5 aktor dan 11 *use case* lengkap dengan relasi `<<include>>` dan `<<extend>>`[cite: 27, 31].
 - **Sequence Diagram (`diagrams/sequence-pmb.mmd` & `diagrams/sequence-krs.mmd`):** Memodelkan skenario end-to-end PMB dan Validasi KRS lengkap dengan *alternate flow* (`alt/else`) untuk penanganan error dan transaksi database[cite: 27, 30, 31].
 - **Katalog Prompt (`prompts/uml-prompts.md`):** Berisi 6 *prompt* utama beserta perbandingan hasil awal AI vs revisi manual[cite: 27, 31].
+
+---
+
+## Implementasi Modul Nilai & Transkrip (Minggu 9–10)
+
+### 1. Fitur & Aturan Bisnis yang Diimplementasikan
+- **Manajemen Nilai (`app/services/nilai_service.py`):** Input dan pembaruan nilai huruf (`A`–`E`) dengan konversi angka ($A=4.0$, $B=3.0$, $C=2.0$, $D=1.0$, $E=0.0$), penolakan otomatis jika presensi $< 75\%$, serta penentuan kelulusan mata kuliah ($\ge D$).
+- **Database Trigger Audit Trail (`app/models/nilai.py`):** Trigger `trg_grades_after_update` pada SQLite yang otomatis menyisipkan rekam jejak ke tabel `grade_history` (`old_value`, `new_value`, `changed_by`, `changed_at`, `reason`) setiap kali nilai diubah, dilengkapi *view* riwayat per mahasiswa.
+- **Kalkulator IPS & IPK:** Implementasi `calculate_ips(nim, semester)`, `calculate_ipk(nim)` (hanya menghitung MK lulus $\ge D$, memilih nilai tertinggi jika MK diulang, serta mengembalikan `0.0` untuk mahasiswa semester awal), `get_transcript(nim)`, dan klasifikasi predikat (*Cum Laude*, *Sangat Memuaskan*, dll.).
+- **Generator Transkrip PDF & Web Portal (`app/services/transcript_pdf.py`, `app/templates/transkrip.html`, `app/templates/nilai_portal.html`):** Portal input nilai dosen dan cetakan transkrip resmi berformat PDF maupun HTML/CSS.
