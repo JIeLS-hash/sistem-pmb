@@ -1,4 +1,3 @@
-
 from app.models.program_studi import ProgramStudi
 from app.models.jalur_masuk import JalurMasuk
 from app.models.calon_mahasiswa import CalonMahasiswa
@@ -9,8 +8,12 @@ from app.models.krs import KRS, KRSDetail
 from app.models.riwayat_nilai import RiwayatNilai
 from app.models.jadwal import Ruangan, Dosen, Kelas, Jadwal
 from app.models.outbox import OutboxEvent
+from app.models.nilai import Grade, GradeHistory
+
 __all__ = [
     "ProgramStudi",
     "JalurMasuk",
     "CalonMahasiswa",
+    "Grade",
+    "GradeHistory",
 ]
