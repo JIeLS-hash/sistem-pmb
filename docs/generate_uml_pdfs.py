@@ -206,6 +206,10 @@ def generate_adr_pdf(output_path: Path) -> None:
             "Mendeteksi bentrok ruangan dan dosen secara efisien O(N log N + K) menggunakan interval setengah terbuka [jam_mulai, jam_selesai).",
         ],
     ]
+    th = ParagraphStyle("TH", parent=styles["body"], fontName="Helvetica-Bold", fontSize=8.8, leading=12, textColor=colors.white, alignment=TA_LEFT, spaceAfter=0)
+    td = ParagraphStyle("TD", parent=styles["body"], fontName="Helvetica", fontSize=8.8, leading=12, textColor=colors.HexColor("#1e293b"), alignment=TA_LEFT, spaceAfter=0)
+    esc = lambda x: x.replace("&", "&").replace("<", "<").replace(">", ">").replace("\n", "<br/>")
+    pattern_data = [[Paragraph(esc(c), th if i == 0 else td) for c in r] for i, r in enumerate(pattern_data)]
     tbl = Table(pattern_data, colWidths=[3.8 * cm, 3.8 * cm, 9.4 * cm])
     tbl.setStyle(
         TableStyle(
